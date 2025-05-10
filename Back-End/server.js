@@ -247,6 +247,7 @@ app.post('/api/auth/verify-otp', async (req, res, next) => {
 
 // POST /api/auth/forgot-password - Request a password reset link
 app.post('/api/auth/forgot-password', async (req, res, next) => {
+    
     const { email } = req.body;
     if (!email) {
         return res.status(400).json({ error: 'Please provide your email address.' });
@@ -296,8 +297,121 @@ app.post('/api/auth/forgot-password', async (req, res, next) => {
         next(new Error('An error occurred while processing the password reset request.'));
     }
 });
-console.log('✅ Mounted POST /api/auth/forgot-password (Inline)'); // Add log message
 
+console.log('✅ Mounted POST /api/auth/forgot-password (Inline)'); // Add log message
+// ... (your existing requires: express, User model, crypto, sendEmail, etc.) ...
+// const app = express();
+// ... (your existing middleware: app.use(express.json()), app.use(cors()), etc.) ...
+
+// --- FORGOT PASSWORD ROUTE (Your Existing Code) ---
+app.post('/api/auth/forgot-password', async (req, res, next) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ error: 'Please provide your email address.' });
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log(`Password reset requested for: ${normalizedEmail}`);
+
+    try {
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            console.log(`Forgot Password: User not found for ${normalizedEmail}, sending generic response.`);
+            return res.status(200).json({ message: '✅ If an account with that email exists, a password reset link has been sent.' });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const tokenExpiry = Date.now() + 3600000; // 1 hour
+
+        user.passwordResetToken = hashedToken;
+        user.passwordResetExpires = new Date(tokenExpiry);
+        await user.save();
+        console.log(`Reset token generated and saved (hashed) for user ${user._id}`);
+
+        const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const resetUrl = `${frontendBaseUrl}/reset-password/${resetToken}`; // ORIGINAL token in URL
+
+        const subject = `Password Reset Request for ${process.env.APP_NAME || 'Your App'}`;
+        const textMessage = `You requested a password reset. Click this link (valid for 1 hour) to reset your password:\n\n${resetUrl}\n\nIf you did not request this, please ignore this email.`;
+        const htmlMessage = `<p>You requested a password reset.</p><p>Click the link below (valid for 1 hour) to reset your password:</p><p><a href="${resetUrl}" target="_blank">Reset Your Password</a></p><p>If you did not request this, ignore this email.</p>`;
+
+        sendEmail(user.email, subject, textMessage, htmlMessage)
+             .then(() => console.log(`Password reset email sent to ${user.email}`))
+             .catch(emailErr => console.error(`❌ FAILED to send password reset email to ${user.email}:`, emailErr));
+
+        res.status(200).json({ message: '✅ If an account with that email exists, a password reset link has been sent.' });
+
+    } catch (error) {
+        console.error('Error in forgot-password route:', error);
+        next(new Error('An error occurred while processing the password reset request.'));
+    }
+});
+console.log('✅ Mounted POST /api/auth/forgot-password (Inline)');
+
+
+// --- RESET PASSWORD ROUTE (NEW CODE TO ADD) ---
+app.post('/api/auth/reset-password/:token', async (req, res, next) => {
+    const { token: receivedToken } = req.params; // Get the ORIGINAL token from URL
+    const { password, confirmPassword } = req.body;
+
+    console.log(`Password reset attempt with token prefix: ${receivedToken ? receivedToken.substring(0,8) : 'N/A'}...`);
+
+    // 1. Basic Validation
+    if (!password || !confirmPassword) {
+        return res.status(400).json({ error: 'Password and confirmation are required.' });
+    }
+    if (password.length < 6) { // Ensure this matches your signup password policy
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+    if (password !== confirmPassword) {
+        return res.status(400).json({ error: 'Passwords do not match.' });
+    }
+
+    try {
+        // 2. Hash the received token to compare with the stored hashed token
+        const hashedReceivedToken = crypto.createHash('sha256').update(receivedToken).digest('hex');
+
+        // 3. Find user by the HASHED token and ensure it's not expired
+        const user = await User.findOne({
+            passwordResetToken: hashedReceivedToken,
+            passwordResetExpires: { $gt: Date.now() } // Check if expiry is in the future
+        });
+
+        if (!user) {
+            console.log(`Reset Password: Invalid or expired token provided (hashed received: ${hashedReceivedToken.substring(0,8)}...).`);
+            // It's important to make it harder for attackers to know if a token was valid but expired vs never valid.
+            // A 400 is generally appropriate here.
+            return res.status(400).json({ error: 'Password reset token is invalid or has expired. Please request a new one.' });
+        }
+
+        // 4. Hash the new password (Assuming you have bcrypt or similar installed and required)
+        // const salt = await bcrypt.genSalt(10);
+        // user.password = await bcrypt.hash(password, salt);
+        // --- OR if you have a pre-save hook in your User model to hash passwords: ---
+        user.password = password; // The pre-save hook in your User model should handle hashing
+
+        // 5. Invalidate the reset token
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save(); // This will trigger the pre-save hook if `user.password` was modified
+
+        console.log(`Password successfully reset for user ${user._id}`);
+        return res.status(200).json({ message: '✅ Password has been reset successfully.' });
+
+    } catch (error) {
+        console.error('Error in reset-password route:', error);
+        // Use a generic error message for the client, log details on server
+        // Consider passing to your global error handler: next(error);
+        return res.status(500).json({ error: 'An error occurred while resetting your password.' });
+    }
+});
+console.log('✅ Mounted POST /api/auth/reset-password/:token (Inline)');
+
+
+// ... (your global error handler if you have one, e.g., app.use((err, req, res, next) => { ... })) ...
+
+// ... (your app.listen call) ...
 // --- ★★★ END OF BLOCK TO ADD ★★★ ---
 
 // POST /api/auth/login (User Login)

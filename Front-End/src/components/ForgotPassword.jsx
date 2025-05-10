@@ -42,7 +42,7 @@ const ForgotPassword = () => {
       );
 
       // Show the generic success message from backend
-      showTemporaryFeedback('success', response.data.message || 'If an account exists, a reset link has been sent.');
+      showTemporaryFeedback('success', response.data.message || 'If an account exists, a reset link has been sent to email .');
       // setEmail(''); // Optionally clear email field
 
     } catch (error) {

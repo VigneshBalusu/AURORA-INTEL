@@ -301,7 +301,7 @@ const Home = () => {
       const payload = {
         prompt: trimmedMessage,
         // Send history for context (optional, depends on backend needs)
-        // history: currentHistory.map(msg => ({ role: msg.role, content: msg.content })), // Send simplified history
+        history: currentHistory.map(msg => ({ role: msg.role, content: msg.content })), // Send simplified history
         chatId: currentChatId // Send current chat ID (null if new chat)
       };
       console.log("Sending payload to /api/chatbot:", payload);

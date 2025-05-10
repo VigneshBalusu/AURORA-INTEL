@@ -1,23 +1,21 @@
 /* src/assets/styles/Navigation.css */
 
-/* Styles are scoped using the .navbar class */
-
 .navbar {
   display: flex;
-  justify-content: flex-end; /* Align items to the right */
+  justify-content: flex-end;
   align-items: center;
   height: 50px;
   width: 100%;
   position: fixed;
-  top: -50px; /* Initially hidden above viewport */
+  top: -50px;
   left: 0;
-  z-index: 1000; /* High stack order */
-  padding-right: 20px; /* Space on the right */
+  z-index: 1000;
+  padding: 0 20px;
   transition: top 0.5s ease-in-out;
-  background: linear-gradient(90deg, #ff6f61, #6a89cc); /* Default background */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Softer shadow */
-  border-bottom: 3px solid transparent; /* For border effect */
-  box-sizing: border-box; /* Include padding/border */
+  background: linear-gradient(90deg, #ff6f61, #6a89cc);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-bottom: 3px solid transparent;
+  box-sizing: border-box;
 }
 
 .navbar.show {
@@ -27,55 +25,99 @@
 .navbar::before {
   content: "";
   position: absolute;
-  top: -3px; /* Position slightly outside */
+  top: -3px;
   left: -3px;
   right: -3px;
   bottom: -3px;
-  border-radius: 5px; /* Optional rounding */
+  border-radius: 5px;
   background: linear-gradient(90deg, #6a89cc, #ff6f61, #ffcc29, #6a89cc);
   background-size: 400% 400%;
-  /* animation: borderAnimation 12s linear infinite; */ /* Optional: Removed intense animation */
-  z-index: -1; /* Place behind the navbar content */
-  opacity: 0.7; /* Make it slightly subtle */
+  z-index: -1;
+  opacity: 0.7;
 }
 
-/* Keyframes are global by nature - define them once if used */
-@keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Mobile menu icon (hamburger / close) */
+.navbar .menu-icon {
+  display: none;
+  font-size: 1.8rem;
+  color: #fff;
+  cursor: pointer;
+  z-index: 1001;
 }
-/* Example usage if needed: */
-/* .navbar { animation: gradientAnimation 15s ease infinite; background-size: 200% 200%; } */
 
-.navbar ul {
+/* Navigation links (default desktop) */
+.nav-links {
   display: flex;
-  gap: 1.5rem; /* Space between links */
+  gap: 1.5rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.navbar ul li a {
+.nav-links li a {
   text-decoration: none;
   font-size: 1rem;
   color: white;
   padding: 8px 15px;
   transition: color 0.3s ease, transform 0.3s ease;
   font-weight: 500;
-  display: block; /* Ensure padding works as expected */
+  display: block;
 }
 
-.navbar ul li a:hover {
-  transform: translateY(-2px); /* Subtle lift */
-  color: #ffdd57; /* Highlight color on hover */
-}
-
-/* Active Link Styling (if using NavLink from react-router-dom) */
-/* .navbar ul li a.active {
+.nav-links li a:hover {
+  transform: translateY(-2px);
   color: #ffdd57;
-  font-weight: 700;
-} */
+}
 
-/* REMOVED Global smooth scrolling */
-/* Add `html { scroll-behavior: smooth; }` to index.css or App.css if needed globally */
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+  .navbar {
+    padding: 0 15px;
+  }
+
+  .navbar .menu-icon {
+    display: block;
+  }
+
+  .nav-links {
+    position: absolute;
+    top: 50px;
+    left:1px;
+    width: 100%;
+    background: #1a1a1a;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: none;
+    z-index: 999;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .nav-links li a {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1.1rem;
+  }
+}
+
+/* Ultra small screens */
+@media screen and (max-width: 480px) {
+  .nav-links {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .nav-links li a {
+    font-size: 1rem;
+    padding: 8px 0;
+  }
+
+  .navbar .menu-icon {
+    font-size: 1.5rem;
+  }
+}
