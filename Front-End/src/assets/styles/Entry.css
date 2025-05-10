@@ -1,86 +1,78 @@
 /* src/assets/styles/Entry.css */
 
-/* Styles scoped to the Entry component using .entry-container */
-
 .entry-container {
-  position: relative; /* For positioning inner content */
-  width: 100%;
-  height: 100vh; /* Full viewport height */
-  overflow: hidden; /* Prevent scrollbars if video exceeds bounds */
-  display: flex; /* Use flex for centering content */
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
-  font-family: sans-serif; /* Basic font */
+  font-family: sans-serif;
 }
 
-/* Apply box-sizing to descendants */
 .entry-container *,
 .entry-container *::before,
 .entry-container *::after {
-    box-sizing: inherit;
+  box-sizing: inherit;
 }
 
-/* Background Video Styling */
 .entry-container video {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Cover the entire container */
-  transform: translate(-50%, -50%);
-  z-index: 1; /* Behind other content */
-  /* Optional: Add a filter for visual effect */
-  /* filter: brightness(0.7); */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: fill;
+  z-index: 1;
 }
 
-/* Content Overlay (for button and text) */
 .entry-container .content {
-  position: relative; /* Position above the video */
-  z-index: 2; /* Ensure content is above the video */
+  position: relative;
+  z-index: 2;
   text-align: center;
-  padding: 20px;
-  border-radius: 10px; /* Optional rounded corners for overlay */
+  padding: 16px;
+  width: 100%;
+  max-width: 90%;
 }
 
-/* Get Started Button Styling */
-.entry-container .content button { /* Scope button style */
-  padding: 14px 28px; /* Generous padding */
-  font-size: 1.1rem; /* Larger font size */
-  font-weight: 600; /* Bold */
+/* Heading */
+.entry-container .content h1 {
   color: white;
-  background: linear-gradient(90deg, #ff6f61, #6a89cc); /* Use app gradient */
+  margin-bottom: 12px;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Subtext */
+.entry-container .content p {
+  color: #f0f0f0;
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Button */
+.entry-container .content button {
+  padding: clamp(8px, 2.5vw, 14px) clamp(18px, 6vw, 28px);
+  font-size: clamp(0.9rem, 3.2vw, 1.1rem);
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(90deg, #ff6f61, #6a89cc);
   border: none;
-  border-radius: 25px; /* Rounded pill shape */
+  border-radius: 25px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  margin-top: 420px;
-  margin-bottom: 200px;;
+  margin-top:250px;
+  /* width: 80px; */
 }
 
+/* Button Hover and Active Effects */
 .entry-container .content button:hover {
-  transform: translateY(-2px); /* Lift effect */
-  
+  transform: translateY(-2px);
 }
-
 .entry-container .content button:active {
-    transform: translateY(0px); /* Click effect */
-     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-/* Optional: Add styles for any text within the .content overlay */
-.entry-container .content h1 {
-    color: white;
-    margin: 0 0 15px 0; /* Reset margin */
-    font-size: 2.5rem;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-.entry-container .content p {
-    color: #f0f0f0;
-    margin: 0 0 20px 0; /* Reset margin */
-    font-size: 1.1rem;
-     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  transform: translateY(0);
 }
