@@ -1,7 +1,7 @@
 // src/components/Home.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // ★ MODIFICATION: Import useNavigate
+import { useNavigate } from 'react-router-dom'; // Required for redirection
 
 // --- Component Imports ---
 // Ensure these paths are correct for your project structure
@@ -24,7 +24,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000
 // Create an axios instance once when the module loads
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 25000, // Increased timeout slightly (25 seconds)
+  timeout: 25000, // General timeout for other requests
 });
 
 // Axios Request Interceptor (Adds Auth Token)
@@ -35,8 +35,6 @@ axiosInstance.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`;
     } else {
       console.warn("No token found for API request to:", config.url);
-      // Optional: Cancel request or trigger logout/redirect if token is mandatory
-      // return Promise.reject(new axios.Cancel('No token available'));
     }
     return config;
   },
@@ -76,7 +74,6 @@ const Home = () => {
     message: '',
     chatIdToDelete: null, // Store the ID here when confirming
 });
- // ★★★ State for Hover Previews ★★★
  const [activePreview, setActivePreview] = useState(null); // 'history' | 'faq' | null
  const [previewPosition, setPreviewPosition] = useState({ top: 0, left: 0 });
  const [previewData, setPreviewData] = useState([]);
@@ -93,7 +90,7 @@ const Home = () => {
   const mainAreaRef = useRef(null); // Ref for the scrollable main chat area container
   const chatEndRef = useRef(null); // Ref to an empty div at the end of chat for auto-scrolling
   
-  // ★ MODIFICATION: Instantiate the navigate function
+  // Instantiate the navigate function from React Router
   const navigate = useNavigate();
 
   // --- Utility Callbacks ---
@@ -102,68 +99,58 @@ const Home = () => {
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 50); // Short delay ensures content is rendered before scrolling
+    }, 50);
   }, []);
 
   // --- Event Handlers ---
 
-  // Update input field state when Input component changes
   const handleInputChange = (newValue) => {
     setPromptText(newValue);
   };
   
-
-  // Handle focus/blur events from the Input component
   const handleFocus = () => setIsInputFocused(true);
   const handleBlur = () => setIsInputFocused(false);
 
-  // Toggle FAQ Sidebar visibility
   const toggleFaqSidebar = () => {
     setIsFaqSidebarOpen(prev => {
       const opening = !prev;
-      if (opening) setIsPrevChatsOpen(false); // Close other sidebar if opening this one
+      if (opening) setIsPrevChatsOpen(false);
       return opening;
     });
   };
 
-      // ★★★ Toggle Previous Chats Sidebar ★★★
-      const togglePrevChatsSidebar = useCallback(() => {
-        setIsPrevChatsOpen(prev => {
-            const opening = !prev;
-            // Fetch chats only when opening the sidebar for the first time or if list is empty
-            if (opening && previousChats.length === 0 && !isLoadingPrevChats) {
-                 fetchPreviousChats(); // This call is fine
-            }
-             if (opening) setIsFaqSidebarOpen(false); // Close other sidebar
-            return opening;
-        });
+  const togglePrevChatsSidebar = useCallback(() => {
+    setIsPrevChatsOpen(prev => {
+        const opening = !prev;
+        if (opening && previousChats.length === 0 && !isLoadingPrevChats) {
+             fetchPreviousChats();
+        }
+         if (opening) setIsFaqSidebarOpen(false);
+        return opening;
+    });
     }, [previousChats.length, isLoadingPrevChats]);
 
   // --- Core Action Callbacks ---
 
-  // Start a completely new chat session
   const handleNewChat = useCallback(() => {
     console.log("Starting New Chat");
-    setChatMessages([]); // Clear message history
-    setPromptText('');    // Clear input field
-    setError('');         // Clear persistent errors
-    setIsLoadingReply(false); // Reset loading state
-    setCurrentChatId(null);   // ★ Crucial: Reset current chat ID
-    setIsNewChatView(true);   // Switch back to the initial greeting view
-    setIsFaqSidebarOpen(false); // Ensure sidebars are closed
+    setChatMessages([]);
+    setPromptText('');
+    setError('');
+    setIsLoadingReply(false);
+    setCurrentChatId(null);
+    setIsNewChatView(true);
+    setIsFaqSidebarOpen(false);
     setIsPrevChatsOpen(false);
-    // Focus input after UI updates, slight delay can help
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, []); // No external dependencies needed for a reset function
+  }, []);
 
-  // Fetch the list of previous chat sessions for the sidebar
   const fetchPreviousChats = useCallback(async () => {
     console.log("Fetching previous chats list...");
     setIsLoadingPrevChats(true);
-    setError(''); // Clear previous errors
+    setError('');
     try {
-      const response = await axiosInstance.get('/api/chats'); // Endpoint for chat list
-      // Ensure data is an array, sort by lastUpdate descending (most recent first)
+      const response = await axiosInstance.get('/api/chats');
       const sortedChats = Array.isArray(response.data)
          ? response.data.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate))
          : [];
@@ -171,25 +158,23 @@ const Home = () => {
       setPreviousChats(sortedChats);
     } catch (err) {
       console.error("Failed to fetch previous chats list:", err);
-      setError("Could not load chat history list."); // Set persistent error
-      setPreviousChats([]); // Set to empty array on error
+      setError("Could not load chat history list.");
+      setPreviousChats([]);
     } finally {
       setIsLoadingPrevChats(false);
     }
-  }, []); // Depends only on axiosInstance (stable)
+  }, []);
 
-  // Load the full message history for a selected chat
   const loadChatHistory = useCallback(async (chatId) => {
-    if (!chatId || isLoadingReply) return; // Prevent loading if busy or no ID
+    if (!chatId || isLoadingReply) return;
     console.log("Loading chat history for ID:", chatId);
 
-    setIsLoadingReply(true); // Use main loading indicator while fetching history
+    setIsLoadingReply(true);
     setError('');
-    setIsPrevChatsOpen(false); // Close sidebar after selection
-    setIsNewChatView(false); // Ensure we are in active chat view
+    setIsPrevChatsOpen(false);
+    setIsNewChatView(false);
 
     try {
-      // Endpoint to get a specific chat's details including messages
       const response = await axiosInstance.get(`/api/chats/${chatId}`);
 
       if (!response.data || !Array.isArray(response.data.messages)) {
@@ -198,10 +183,9 @@ const Home = () => {
       }
 
       console.log("Loaded messages:", response.data.messages);
-      setChatMessages(response.data.messages); // Replace current messages with loaded history
-      setCurrentChatId(chatId);               // Set the active chat ID
+      setChatMessages(response.data.messages);
+      setCurrentChatId(chatId);
 
-      // Optional: If the API response includes title/metadata, update the sidebar list item
       const { title, lastUpdate } = response.data;
       if (title || lastUpdate) {
           setPreviousChats(prev => prev.map(chat =>
@@ -220,27 +204,23 @@ const Home = () => {
            errorMsg = err.message || errorMsg;
       }
       setError(errorMsg);
-      // Revert to a stable state on failure
       setChatMessages([]);
       setCurrentChatId(null);
-      setIsNewChatView(true); // Go back to new chat view on error
+      setIsNewChatView(true);
     } finally {
-      setIsLoadingReply(false); // Turn off loading indicator
-      setTimeout(() => inputRef.current?.focus(), 100); // Re-focus input
+      setIsLoadingReply(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isLoadingReply]);
 
-  // Handle selecting a chat from the PreviousChats sidebar
   const handleSelectChat = useCallback((chatId) => {
     if (chatId === currentChatId) {
-      // If clicking the already active chat, just close the sidebar
       setIsPrevChatsOpen(false);
       return;
     }
     loadChatHistory(chatId);
   }, [currentChatId, loadChatHistory]);
 
-  // Handle deleting a chat from the PreviousChats sidebar
   const handleDeleteChat = useCallback((chatId) => {
     if (!chatId || deletingChatId || confirmationState.isOpen) {
         return;
@@ -253,10 +233,9 @@ const Home = () => {
     });
 }, [deletingChatId, confirmationState.isOpen]);
 
-  // Send the user's prompt (or clicked FAQ) to the backend chatbot endpoint
   const handleSendPrompt = useCallback(async (messageToSend) => {
     const trimmedMessage = messageToSend?.trim();
-    if (!trimmedMessage || isLoadingReply) return; // Ignore empty/whitespace prompts or if already loading
+    if (!trimmedMessage || isLoadingReply) return;
 
     console.log("Submitting prompt:", trimmedMessage, "for chat ID:", currentChatId);
     setError('');
@@ -342,7 +321,6 @@ const Home = () => {
     }
   }, [isLoadingReply, isNewChatView, currentChatId, chatMessages]);
 
-  // Handle clicking an FAQ item - sends it as a prompt
   const handleFaqClick = (faqText) => {
     console.log("FAQ Clicked:", faqText);
     setIsFaqSidebarOpen(false);
@@ -392,25 +370,24 @@ const Home = () => {
 
   // --- Effects ---
 
-  // ★ MODIFICATION: This entire useEffect block is replaced to include the timeout logic.
-  // Fetch User Data on Initial Mount
+  // Fetch User Data on Initial Mount with 1-second timeout
   useEffect(() => {
     let isFetchCompleted = false;
 
-    // Set a 5-second timeout. If the fetch isn't completed by then, redirect.
+    // Set a 1-second timeout. If the fetch isn't completed by then, redirect.
     const fetchTimeout = setTimeout(() => {
         // Only redirect if the fetch operation is still running
         if (!isFetchCompleted) {
-            console.warn("User data fetch timed out after 5 seconds. Redirecting to /login.");
+            console.warn("User data fetch timed out after 1 second. Redirecting to /login.");
             // Assuming your login route is '/login'
             navigate('/login');
         }
-    }, 5000); // 5000 milliseconds = 5 seconds
+    }, 1000); // ★ MODIFICATION: Timeout set to 1000 milliseconds (1 second)
 
     const fetchUserData = async () => {
       try {
         console.log("Fetching user data...");
-        const response = await axiosInstance.get('/api/user'); // Endpoint to get user info
+        const response = await axiosInstance.get('/api/user');
 
         if (!response.data || typeof response.data.name !== 'string') {
           console.warn("User data format incorrect from API:", response.data);
@@ -418,7 +395,7 @@ const Home = () => {
         }
         const fetchedName = response.data.name.trim();
         console.log("Effect: Fetched user name:", fetchedName);
-        setUsername(fetchedName || 'User'); // Use fetched name or fallback
+        setUsername(fetchedName || 'User');
 
       } catch (err) {
         console.error("Effect: Failed to fetch user:", err);
@@ -432,15 +409,14 @@ const Home = () => {
         } else {
           errorMsg = err.message || errorMsg;
         }
-        setError(errorMsg); // Set persistent error message
-        setUsername('User'); // Fallback username on error
+        setError(errorMsg);
+        setUsername('User');
       } finally {
-        // Mark the fetch as completed and clear the timeout
+        // Mark the fetch as completed and clear the timeout to prevent redirection
         isFetchCompleted = true;
         clearTimeout(fetchTimeout);
         console.log("Effect: Setting isLoadingUser to false.");
         setIsLoadingUser(false);
-        // Ensure input is focused if starting fresh
         setTimeout(() => inputRef.current?.focus(), 150);
       }
     };
@@ -456,14 +432,14 @@ const Home = () => {
   // Add navigate to the dependency array
   }, [navigate]);
 
-  // Scroll to bottom when new messages are added in active chat view
+  // Scroll to bottom when new messages are added
   useEffect(() => {
     if (!isNewChatView && chatMessages.length > 0) {
       scrollToBottom();
     }
   }, [chatMessages, isNewChatView, scrollToBottom]);
 
-  // Keyboard Shortcuts (Ctrl+I for New Chat, Ctrl+H for History)
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (event) => {
       const targetTagName = event.target.tagName.toLowerCase();
@@ -658,7 +634,7 @@ const handleMouseEnterPreview = useCallback(() => {
       )}
 
 
-      {/* === Sidebars (Rendered outside main flow, controlled by state) === */}
+      {/* === Sidebars === */}
       <div className={`${styles.faqSidebar} ${isFaqSidebarOpen ? styles.open : ''}`}>
          <div className={styles.faqSidebarHeader}>
              <h2>FAQs</h2>
