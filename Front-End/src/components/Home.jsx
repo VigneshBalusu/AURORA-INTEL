@@ -1,10 +1,9 @@
 // src/components/Home.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Required for redirection
+import { useNavigate } from 'react-router-dom';
 
 // --- Component Imports ---
-// Ensure these paths are correct for your project structure
 import Input from './Input';
 import PreviousChats from './PreviousChats';
 import PreviewCard from './PreviewCard';
@@ -12,25 +11,22 @@ import ConfirmationDialog from './ConfirmationDialog';
 
 
 // --- Asset Imports ---
-// Ensure these paths are correct for your project structure
 import logo from '../assets/images/logo.jpeg';
-import styles from '../assets/styles/Home.module.css'; // Main styles for Home
-// Note: PreviousChats should import its own PreviousChats.module.css
+import styles from '../assets/styles/Home.module.css';
 
 // --- Constants ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"; // Your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 // --- Axios Instance ---
-// Create an axios instance once when the module loads
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 25000, // General timeout for other requests
+  timeout: 25000,
 });
 
 // Axios Request Interceptor (Adds Auth Token)
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // Or however you store your token
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     } else {
@@ -44,7 +40,7 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// --- Hardcoded FAQs (Replace/Fetch as needed) ---
+// --- Hardcoded FAQs ---
 const hardcodedFaqs = [
     "What is AI?", "How does the AI work?", "What kind of questions can I ask?",
     "Is my data secure?", "How can I provide feedback?", "Explain machine learning simply.",
@@ -60,42 +56,41 @@ const hardcodedFaqs = [
 const Home = () => {
   // --- State ---
   const [username, setUsername] = useState('');
-  const [isLoadingUser, setIsLoadingUser] = useState(true); // Loading initial user data
-  const [error, setError] = useState(''); // Persistent errors shown (e.g., user load failed)
-  const [promptText, setPromptText] = useState(''); // Value of the text input field
-  const [isInputFocused, setIsInputFocused] = useState(false); // For UI adjustments (e.g., logo visibility)
-  const [isNewChatView, setIsNewChatView] = useState(true); // Controls initial view vs active chat view
-  const [chatMessages, setChatMessages] = useState([]); // Current chat message history: { role: 'user'|'bot'|'error', content: string }[]
-  const [isLoadingReply, setIsLoadingReply] = useState(false); // Shows bot "thinking" indicator
-  const [isFaqSidebarOpen, setIsFaqSidebarOpen] = useState(false); // FAQ Sidebar visibility
-  const [faqs, setFaqs] = useState(hardcodedFaqs); // FAQs data
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [error, setError] = useState('');
+  const [promptText, setPromptText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isNewChatView, setIsNewChatView] = useState(true);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [isLoadingReply, setIsLoadingReply] = useState(false);
+  const [isFaqSidebarOpen, setIsFaqSidebarOpen] = useState(false);
+  const [faqs, setFaqs] = useState(hardcodedFaqs);
   const [confirmationState, setConfirmationState] = useState({
     isOpen: false,
     message: '',
-    chatIdToDelete: null, // Store the ID here when confirming
+    chatIdToDelete: null,
 });
- const [activePreview, setActivePreview] = useState(null); // 'history' | 'faq' | null
+ const [activePreview, setActivePreview] = useState(null);
  const [previewPosition, setPreviewPosition] = useState({ top: 0, left: 0 });
  const [previewData, setPreviewData] = useState([]);
- const leaveTimeoutRef = useRef(null); // Ref to store the timeout ID
+ const leaveTimeoutRef = useRef(null);
   // --- State for Previous Chats ---
-  const [currentChatId, setCurrentChatId] = useState(null); // ID of the active chat session, null for new chat
-  const [isPrevChatsOpen, setIsPrevChatsOpen] = useState(false); // Previous Chats sidebar visibility
-  const [previousChats, setPreviousChats] = useState([]); // List of available chats: { id, title, lastUpdate }[]
-  const [isLoadingPrevChats, setIsLoadingPrevChats] = useState(false); // Loading indicator for Previous Chats list
-  const [deletingChatId, setDeletingChatId] = useState(null); // ID of chat currently being deleted (for UI feedback)
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [isPrevChatsOpen, setIsPrevChatsOpen] = useState(false);
+  const [previousChats, setPreviousChats] = useState([]);
+  const [isLoadingPrevChats, setIsLoadingPrevChats] = useState(false);
+  const [deletingChatId, setDeletingChatId] = useState(null);
 
   // --- Refs ---
-  const inputRef = useRef(null); // Ref for the Input component's textarea/input element
-  const mainAreaRef = useRef(null); // Ref for the scrollable main chat area container
-  const chatEndRef = useRef(null); // Ref to an empty div at the end of chat for auto-scrolling
+  const inputRef = useRef(null);
+  const mainAreaRef = useRef(null);
+  const chatEndRef = useRef(null);
+  // ★ MODIFICATION: Add a ref to ensure the fetch runs only once per mount.
+  const fetchAttempted = useRef(false);
   
-  // Instantiate the navigate function from React Router
   const navigate = useNavigate();
 
   // --- Utility Callbacks ---
-
-  // Scroll to the bottom of the chat area smoothly
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -103,7 +98,6 @@ const Home = () => {
   }, []);
 
   // --- Event Handlers ---
-
   const handleInputChange = (newValue) => {
     setPromptText(newValue);
   };
@@ -131,7 +125,6 @@ const Home = () => {
     }, [previousChats.length, isLoadingPrevChats]);
 
   // --- Core Action Callbacks ---
-
   const handleNewChat = useCallback(() => {
     console.log("Starting New Chat");
     setChatMessages([]);
@@ -154,7 +147,6 @@ const Home = () => {
       const sortedChats = Array.isArray(response.data)
          ? response.data.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate))
          : [];
-      console.log("Fetched chats list:", sortedChats);
       setPreviousChats(sortedChats);
     } catch (err) {
       console.error("Failed to fetch previous chats list:", err);
@@ -168,31 +160,23 @@ const Home = () => {
   const loadChatHistory = useCallback(async (chatId) => {
     if (!chatId || isLoadingReply) return;
     console.log("Loading chat history for ID:", chatId);
-
     setIsLoadingReply(true);
     setError('');
     setIsPrevChatsOpen(false);
     setIsNewChatView(false);
-
     try {
       const response = await axiosInstance.get(`/api/chats/${chatId}`);
-
       if (!response.data || !Array.isArray(response.data.messages)) {
-        console.error("Invalid chat history structure received:", response.data);
         throw new Error("Invalid chat history structure from API.");
       }
-
-      console.log("Loaded messages:", response.data.messages);
       setChatMessages(response.data.messages);
       setCurrentChatId(chatId);
-
       const { title, lastUpdate } = response.data;
       if (title || lastUpdate) {
           setPreviousChats(prev => prev.map(chat =>
               chat.id === chatId ? { ...chat, title: title || chat.title, lastUpdate: lastUpdate || chat.lastUpdate } : chat
           ));
       }
-
     } catch (err) {
       console.error(`Failed to load chat ${chatId}:`, err);
       let errorMsg = `Could not load chat history.`;
@@ -225,7 +209,6 @@ const Home = () => {
     if (!chatId || deletingChatId || confirmationState.isOpen) {
         return;
     }
-    console.log(`Requesting confirmation to delete chat ID: ${chatId}`);
     setConfirmationState({
         isOpen: true,
         message: `Are you sure you want to delete this chat? This action cannot be undone.`,
@@ -236,8 +219,6 @@ const Home = () => {
   const handleSendPrompt = useCallback(async (messageToSend) => {
     const trimmedMessage = messageToSend?.trim();
     if (!trimmedMessage || isLoadingReply) return;
-
-    console.log("Submitting prompt:", trimmedMessage, "for chat ID:", currentChatId);
     setError('');
     const currentHistory = chatMessages;
     const wasNewChat = isNewChatView;
@@ -245,55 +226,31 @@ const Home = () => {
     setIsLoadingReply(true);
     setIsFaqSidebarOpen(false);
     setIsPrevChatsOpen(false);
-
     const newUserMessage = { role: 'user', content: trimmedMessage };
     setChatMessages(prev => [...prev, newUserMessage]);
     setPromptText('');
-
     try {
       const payload = {
         prompt: trimmedMessage,
         history: currentHistory.map(msg => ({ role: msg.role, content: msg.content })),
         chatId: currentChatId
       };
-      console.log("Sending payload to /api/chatbot:", payload);
-
       const response = await axiosInstance.post('/api/chatbot', payload);
-
       if (!response.data || typeof response.data.answer !== 'string') {
-        console.error("Invalid response structure from /api/chatbot:", response.data);
         throw new Error("Invalid response from server (missing answer).");
       }
-
       const newBotMessage = { role: 'bot', content: response.data.answer };
       setChatMessages(prev => [...prev, newBotMessage]);
-
       if (wasNewChat && response.data.newChatId) {
         const newId = response.data.newChatId;
         const newTitle = response.data.title || generateTitleFromPrompt(trimmedMessage);
-        console.log(`New chat created with ID: ${newId}, Title: "${newTitle}"`);
         setCurrentChatId(newId);
-
-        const newChatItem = {
-          id: newId,
-          title: newTitle,
-          lastUpdate: new Date().toISOString()
-        };
+        const newChatItem = { id: newId, title: newTitle, lastUpdate: new Date().toISOString() };
         setPreviousChats(prev => [newChatItem, ...prev]);
-
       } else if (currentChatId && response.data.updatedChat) {
         const updatedInfo = response.data.updatedChat;
-         console.log("Updating chat metadata in sidebar for ID:", currentChatId, updatedInfo);
-        setPreviousChats(prev => prev
-          .map(chat =>
-            chat.id === currentChatId
-              ? { ...chat, ...updatedInfo }
-              : chat
-          )
-          .sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate))
-        );
+        setPreviousChats(prev => prev.map(chat => chat.id === currentChatId ? { ...chat, ...updatedInfo } : chat).sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate)));
       }
-
     } catch (err) {
       console.error("Failed to get bot response:", err);
       let errorMsg = "Sorry, failed to get a response.";
@@ -307,12 +264,8 @@ const Home = () => {
           }
         } else if (err.request) {
           errorMsg = "Network error: Could not reach the server.";
-        } else {
-          errorMsg = `Request setup error: ${err.message}`;
-        }
-      } else {
-        errorMsg = `An unexpected error occurred: ${err.message}`;
-      }
+        } else { errorMsg = `Request setup error: ${err.message}`; }
+      } else { errorMsg = `An unexpected error occurred: ${err.message}`; }
       const errorMessage = { role: 'error', content: errorMsg };
       setChatMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -322,7 +275,6 @@ const Home = () => {
   }, [isLoadingReply, isNewChatView, currentChatId, chatMessages]);
 
   const handleFaqClick = (faqText) => {
-    console.log("FAQ Clicked:", faqText);
     setIsFaqSidebarOpen(false);
     handleSendPrompt(faqText);
   };
@@ -330,22 +282,15 @@ const Home = () => {
   const confirmDeletion = useCallback(async () => {
     const chatId = confirmationState.chatIdToDelete;
     if (!chatId) return;
-
-    console.warn(`Confirmed deletion for chat ID: ${chatId}`);
     setConfirmationState({ isOpen: false, message: '', chatIdToDelete: null });
     setDeletingChatId(chatId);
     setError('');
-
     try {
         await axiosInstance.delete(`/api/chats/${chatId}`);
-        console.log(`Chat ${chatId} deleted successfully.`);
-
         setPreviousChats(prev => prev.filter(chat => chat.id !== chatId));
-
         if (chatId === currentChatId) {
             handleNewChat();
         }
-
     } catch (err) {
         console.error(`Failed to delete chat ${chatId}:`, err);
         let errorMsg = "Could not delete chat.";
@@ -353,9 +298,7 @@ const Home = () => {
             errorMsg = "Chat not found or already deleted.";
         } else if (axios.isAxiosError(err) && err.response?.status === 403) {
             errorMsg = "You don't have permission to delete this chat.";
-        } else {
-             errorMsg = err.message || errorMsg;
-        }
+        } else { errorMsg = err.message || errorMsg; }
         setError(errorMsg);
     } finally {
         setDeletingChatId(null);
@@ -363,74 +306,56 @@ const Home = () => {
 }, [confirmationState.chatIdToDelete, currentChatId, handleNewChat]);
 
  const cancelDeletion = useCallback(() => {
-  console.log("Deletion cancelled.");
   setConfirmationState({ isOpen: false, message: '', chatIdToDelete: null });
 }, []);
 
 
   // --- Effects ---
 
-  // Fetch User Data on Initial Mount with 1-second timeout
+  // ★ MODIFICATION: This entire useEffect block is replaced with robust, one-time auth check.
   useEffect(() => {
-    let isFetchCompleted = false;
-
-    // Set a 1-second timeout. If the fetch isn't completed by then, redirect.
-    const fetchTimeout = setTimeout(() => {
-        // Only redirect if the fetch operation is still running
-        if (!isFetchCompleted) {
-            console.warn("User data fetch timed out after 1 second. Redirecting to /login.");
-            // Assuming your login route is '/login'
-            navigate('/login');
-        }
-    }, 1000); // ★ MODIFICATION: Timeout set to 1000 milliseconds (1 second)
+    // Prevent the fetch from running if it has already been attempted.
+    if (fetchAttempted.current) {
+        return;
+    }
+    // Mark that we are attempting the fetch.
+    fetchAttempted.current = true;
 
     const fetchUserData = async () => {
       try {
-        console.log("Fetching user data...");
+        console.log("Fetching user data (one-time attempt)...");
         const response = await axiosInstance.get('/api/user');
-
+        
         if (!response.data || typeof response.data.name !== 'string') {
-          console.warn("User data format incorrect from API:", response.data);
           throw new Error("User data format incorrect from API.");
         }
+        
         const fetchedName = response.data.name.trim();
-        console.log("Effect: Fetched user name:", fetchedName);
         setUsername(fetchedName || 'User');
+        setIsLoadingUser(false); // Success, so stop loading.
 
       } catch (err) {
-        console.error("Effect: Failed to fetch user:", err);
-        let errorMsg = "Could not load user data.";
-        if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
-          errorMsg = "Session expired or invalid. Please log in.";
-          // In case of an auth error, we can also redirect immediately
-          navigate('/login');
-        } else if (axios.isAxiosError(err) && !err.response) {
-          errorMsg = "Network Error: Cannot connect to fetch user data.";
+        console.error("Effect: Failed to fetch user:", err.message);
+        
+        // This is the critical part for handling auth failure.
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+            console.error("Authentication failed (401). Cleaning up and redirecting to login.");
+            // 1. Clean up invalid token and user info to break the redirect loop.
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo'); // Or any other user data key
+            
+            // 2. Redirect to the login page.
+            navigate('/login');
         } else {
-          errorMsg = err.message || errorMsg;
+            // For other errors (network, server 500, etc.), just show an error.
+            setError("Could not load user data. Please refresh the page.");
+            setIsLoadingUser(false); // Stop loading even on failure.
         }
-        setError(errorMsg);
-        setUsername('User');
-      } finally {
-        // Mark the fetch as completed and clear the timeout to prevent redirection
-        isFetchCompleted = true;
-        clearTimeout(fetchTimeout);
-        console.log("Effect: Setting isLoadingUser to false.");
-        setIsLoadingUser(false);
-        setTimeout(() => inputRef.current?.focus(), 150);
       }
     };
 
-    setIsLoadingUser(true);
-    setError('');
     fetchUserData();
-
-    // Cleanup function: If the component unmounts, clear the timeout
-    return () => {
-        clearTimeout(fetchTimeout);
-    };
-  // Add navigate to the dependency array
-  }, [navigate]);
+  }, [navigate]); // navigate is a stable dependency.
 
   // Scroll to bottom when new messages are added
   useEffect(() => {
@@ -450,21 +375,17 @@ const Home = () => {
       }
       if ((event.ctrlKey || event.metaKey) && event.key === 'i') {
         event.preventDefault();
-        console.log("Shortcut: Ctrl+I detected");
         handleNewChat();
       }
       else if ((event.ctrlKey || event.metaKey) && event.key === 'h') {
         event.preventDefault();
-         console.log("Shortcut: Ctrl+H detected");
         togglePrevChatsSidebar();
       }
        else if (event.key === '?' && targetTagName !== 'input' && targetTagName !== 'textarea') {
             event.preventDefault();
-            console.log("Shortcut: ? detected");
            toggleFaqSidebar();
        }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -473,43 +394,32 @@ const Home = () => {
 
   const handleMouseEnterButton = useCallback((type, event) => {
     clearTimeout(leaveTimeoutRef.current);
-
     const rect = event.currentTarget.getBoundingClientRect();
     let dataToShow = [];
     let pos = { top: 0, left: 0 };
-
     if (type === 'faq') {
         dataToShow = faqs.slice(0, 5);
-        pos = {
-            top: rect.bottom + 8,
-            left: rect.left,
-        };
+        pos = { top: rect.bottom + 8, left: rect.left };
     } else if (type === 'history') {
         if (previousChats.length === 0 && !isLoadingPrevChats) {
              fetchPreviousChats();
         }
         dataToShow = previousChats.slice(0, 5);
-         pos = {
-            top: rect.top - 190,
-            left: rect.left,
-        };
+         pos = { top: rect.top - 190, left: rect.left };
     }
-
     setPreviewData(dataToShow);
     setPreviewPosition(pos);
     setActivePreview(type);
-
 }, [faqs, previousChats, isLoadingPrevChats, fetchPreviousChats]);
 
 const handleMouseLeaveWithDelay = useCallback(() => {
-    leaveTimeoutRef.current = setTimeout(() => {
-        setActivePreview(null);
-    }, 200);
+    leaveTimeoutRef.current = setTimeout(() => { setActivePreview(null); }, 200);
 }, []);
 
 const handleMouseEnterPreview = useCallback(() => {
     clearTimeout(leaveTimeoutRef.current);
 }, []);
+
   // --- Helper ---
    const generateTitleFromPrompt = (prompt) => {
        const trimmed = prompt.trim();
@@ -523,21 +433,17 @@ const handleMouseEnterPreview = useCallback(() => {
   // --- JSX ---
   return (
     <div className={styles.homeContainer}>
-
-      {/* === Top Bar Elements === */}
       <div className={styles.topBar}>
         {!isLoadingUser && !isFaqSidebarOpen && (
-                <button
-                    className={styles.faqSidebarToggle}
-                    onClick={toggleFaqSidebar}
-                    title="Show FAQs (?)"
-                    aria-label="Show FAQs"
-                    onMouseEnter={(e) => handleMouseEnterButton('faq', e)}
-                    onMouseLeave={handleMouseLeaveWithDelay}
-                > ❔
-                </button>
-            )}
-
+            <button
+                className={styles.faqSidebarToggle}
+                onClick={toggleFaqSidebar}
+                title="Show FAQs (?)"
+                aria-label="Show FAQs"
+                onMouseEnter={(e) => handleMouseEnterButton('faq', e)}
+                onMouseLeave={handleMouseLeaveWithDelay}
+            > ❔ </button>
+        )}
         {!isLoadingUser && isLogoVisible && (
           <div className={styles.logoTopRight}>
             <img src={logo} alt="Logo" className={styles.logoImage} />
@@ -545,8 +451,6 @@ const handleMouseEnterPreview = useCallback(() => {
         )}
       </div>
 
-
-      {/* === Main Content Area (Conditional Rendering) === */}
       <div
           ref={mainAreaRef}
           className={`
@@ -557,7 +461,7 @@ const handleMouseEnterPreview = useCallback(() => {
       >
         {isLoadingUser ? (
             <div className={styles.loadingView}>
-                <p>Loading user data...</p>
+                <p>Verifying user...</p>
             </div>
         ) : error && isNewChatView ? (
             <div className={styles.errorView}>
@@ -596,9 +500,7 @@ const handleMouseEnterPreview = useCallback(() => {
         )}
       </div>
 
-
-      {/* === Input Area === */}
-           {!isLoadingUser && (
+      {!isLoadingUser && (
         <div className={styles.inputAreaContainer}>
           <Input
             ref={inputRef}
@@ -633,8 +535,6 @@ const handleMouseEnterPreview = useCallback(() => {
         </div>
       )}
 
-
-      {/* === Sidebars === */}
       <div className={`${styles.faqSidebar} ${isFaqSidebarOpen ? styles.open : ''}`}>
          <div className={styles.faqSidebarHeader}>
              <h2>FAQs</h2>
@@ -646,44 +546,36 @@ const handleMouseEnterPreview = useCallback(() => {
              {faqs.length > 0 ? (
                  <ul className={styles.faqList}>
                      {faqs.map((faq, index) => (
-                         <li
-                             key={index}
-                             className={styles.faqItem}
-                             onClick={() => handleFaqClick(faq)}
-                             tabIndex={0}
-                             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleFaqClick(faq)}
-                         >
+                         <li key={index} className={styles.faqItem} onClick={() => handleFaqClick(faq)} tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleFaqClick(faq)}>
                              {faq}
                          </li>
                      ))}
                  </ul>
-             ) : (
-                <p className={styles.noFaqsText}>No FAQs available at the moment.</p>
-             )}
+             ) : ( <p className={styles.noFaqsText}>No FAQs available at the moment.</p> )}
          </div>
       </div>
 
       {!isLoadingUser && (
-                <PreviousChats
-                  isOpen={isPrevChatsOpen}
-                  chats={previousChats}
-                  isLoading={isLoadingPrevChats}
-                  currentChatId={currentChatId}
-                  onSelectChat={handleSelectChat}
-                  onDeleteChat={handleDeleteChat}
-                  onNewChat={handleNewChat}
-                  onClose={togglePrevChatsSidebar}
-                  isDeletingId={deletingChatId}
-                />
-            )}
-           <PreviewCard
-                 type={activePreview}
-                 data={previewData}
-                 isVisible={activePreview !== null}
-                 position={previewPosition}
-                 onMouseEnter={handleMouseEnterPreview}
-                 onMouseLeave={handleMouseLeaveWithDelay}
-             />
+        <PreviousChats
+          isOpen={isPrevChatsOpen}
+          chats={previousChats}
+          isLoading={isLoadingPrevChats}
+          currentChatId={currentChatId}
+          onSelectChat={handleSelectChat}
+          onDeleteChat={handleDeleteChat}
+          onNewChat={handleNewChat}
+          onClose={togglePrevChatsSidebar}
+          isDeletingId={deletingChatId}
+        />
+      )}
+       <PreviewCard
+         type={activePreview}
+         data={previewData}
+         isVisible={activePreview !== null}
+         position={previewPosition}
+         onMouseEnter={handleMouseEnterPreview}
+         onMouseLeave={handleMouseLeaveWithDelay}
+       />
     </div>
   );
 };
