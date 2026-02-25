@@ -166,7 +166,7 @@ app.post('/api/auth/request-otp', async (req, res, next) => {
         await sendEmail(normalizedEmail, "Your Account Verification Code", `Your verification code is: ${otp}\nIt expires in 5 minutes.`);
 
         res.status(200).json({ message: `✅ OTP sent successfully to ${normalizedEmail}` });
-    } } catch (error) { 
+    }  catch (error) { 
     console.error("Error requesting OTP:", error); 
     // Force Express to send the error directly to the frontend
     return res.status(500).json({ 
