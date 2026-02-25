@@ -143,39 +143,52 @@ app.get('/api', (req, res) => res.status(200).json({ message: '🚀 API /api bas
 
 // POST /api/auth/request-otp (Start OTP Signup)
 app.post('/api/auth/request-otp', async (req, res, next) => {
-    const { email } = req.body;
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ error: 'Valid email is required.' });
-    }
-    const normalizedEmail = email.toLowerCase();
+    // 1. Proof of Life Log (If this prints, the request reached the backend)
+    console.log("🚨 [DEBUG] OTP Route Triggered! Received Body:", req.body); 
+
     try {
+        // 2. Safely extract email so it doesn't crash if body is empty
+        const { email } = req.body || {}; 
+        
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            console.log("❌ OTP Route: Invalid or missing email");
+            return res.status(400).json({ error: 'Valid email is required.' });
+        }
+        
+        const normalizedEmail = email.toLowerCase();
+        
         const existingUser = await User.findOne({ email: normalizedEmail });
-        if (existingUser) { return res.status(409).json({ error: 'Email already registered. Please Login.' }); }
+        if (existingUser) { 
+            return res.status(409).json({ error: 'Email already registered. Please Login.' }); 
+        }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
         const otpExpires = Date.now() + 5 * 60 * 1000; // 5 minute validity
+        
         otpStore.set(normalizedEmail, { otp, expires: otpExpires });
-        console.log(`DEV ONLY - OTP for ${normalizedEmail}: ${otp}`); // Log OTP for debugging
+        console.log(`DEV ONLY - OTP for ${normalizedEmail}: ${otp}`); 
 
-        setTimeout(() => { // Schedule cleanup of expired/unused OTP
+        setTimeout(() => { 
             const current = otpStore.get(normalizedEmail);
             if (current?.otp === otp) otpStore.delete(normalizedEmail);
         }, otpExpires - Date.now() + 2000);
 
-        // Send OTP email (uses imported sendEmail utility)
-        await sendEmail(normalizedEmail, "Your Account Verification Code", `Your verification code is: ${otp}\nIt expires in 5 minutes.`);
+        await sendEmail(
+            normalizedEmail, 
+            "Your Account Verification Code", 
+            `Your verification code is: ${otp}\nIt expires in 5 minutes.`
+        );
 
-        res.status(200).json({ message: `✅ OTP sent successfully to ${normalizedEmail}` });
-    }  catch (error) { 
-    console.error("Error requesting OTP:", error); 
-    // Force Express to send the error directly to the frontend
-    return res.status(500).json({ 
-        error: "Backend crashed!", 
-        details: error.message 
-    }); 
-} // Pass errors to global handler
+        return res.status(200).json({ message: `✅ OTP sent successfully to ${normalizedEmail}` });
+        
+    } catch (error) { 
+        console.error("❌ CRASH IN OTP ROUTE:", error); 
+        return res.status(500).json({ 
+            error: "Backend crashed while processing OTP.", 
+            details: error.message 
+        }); 
+    }
 });
-
 // POST /api/auth/verify-otp (Complete OTP Signup)
 // server.js (Replace the existing /api/auth/verify-otp route handler with this corrected version)
 
