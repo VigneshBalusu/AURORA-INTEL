@@ -117,8 +117,8 @@ const SignUp = () => {
       const targetEmail = formData.email.trim().toLowerCase();
       console.log(`Requesting OTP${isResend ? ' (Resend)' : ''} for: ${targetEmail}`);
 
-      // Call backend to request/resend OTP
-      const response = await axios.post(`${API_BASE_URL}/api/auth/request-otp`, { email: targetEmail }, { timeout: 15000 });
+      // ✅ FIX: Increased timeout to 60000ms to allow Render to wake up
+      const response = await axios.post(`${API_BASE_URL}/api/auth/request-otp`, { email: targetEmail }, { timeout: 60000 });
 
       showTemporaryFeedback('success', response.data?.message || `✅ OTP (re)sent to ${targetEmail}.`);
       if (!isResend) {
@@ -137,7 +137,7 @@ const SignUp = () => {
        } else if (error.request) { // Network error
             errMsg = "❌ Network error: Could not reach server for OTP.";
        } else if (error.code === 'ECONNABORTED') {
-           errMsg = "❌ Request timed out sending OTP.";
+           errMsg = "❌ Request timed out sending OTP. The server might still be waking up.";
        }
         showTemporaryFeedback('failure', errMsg);
         setCanResendOtp(true); // Allow retry on error
@@ -166,13 +166,14 @@ const SignUp = () => {
 
     try {
       console.log("Verifying OTP and creating account...");
-      // Call backend to verify and complete signup
+      
+      // ✅ FIX: Increased timeout to 60000ms here as well
       const response = await axios.post(`${API_BASE_URL}/api/auth/verify-otp`, {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password, // Send plain password
         otp: otp,
-      }, { timeout: 15000 });
+      }, { timeout: 60000 });
 
       console.log("Signup/Verification success:", response.data);
        // Use a non-temporary success message for the final stage
