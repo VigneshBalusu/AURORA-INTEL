@@ -140,7 +140,10 @@ app.get('/', (req, res) => res.status(200).json({ message: '🚀 API Root is run
 app.get('/api', (req, res) => res.status(200).json({ message: '🚀 API /api base reached!' }));
 
 // --- Authentication & User Management Routes ---
-
+app.get('/api/auth/test', (req, res) => {
+    console.log("✅ Test route hit successfully!");
+    res.status(200).json({ message: "Your backend is wide awake!" });
+});
 // POST /api/auth/request-otp (Start OTP Signup)
 app.post('/api/auth/request-otp', async (req, res, next) => {
     // 1. Proof of Life Log (If this prints, the request reached the backend)
