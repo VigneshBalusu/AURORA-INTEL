@@ -94,7 +94,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '5mb' })); // Parse JSON request bodies (limit size)
 app.use(express.urlencoded({ extended: true, limit: '5mb' })); // Parse URL-encoded bodies
-app.use('/api', chatRoutes); // ✅ Makes /api/chatbot and /api/chat-history work
+// app.use('/api', chatRoutes); // ✅ Makes /api/chatbot and /api/chat-history work
 
 // --- Static File Serving ---
 // Serve files from the /public/uploads directory via the /uploads URL path
@@ -995,7 +995,7 @@ app.post('/api/send-email', async (req, res, next) => {
 });
 console.log('✅ Mounted POST /api/send-email (Inline)');
 
-
+app.use('/api/chats', chatRoutes);
 // --- Mount External Routes (Example: Experiences) ---
 app.use('/api/experiences', experienceRoutes);
 console.log('✅ Mounted /api/experiences (External Router)');
